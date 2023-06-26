@@ -1,6 +1,6 @@
 import { SecretsmanagerSecret } from "@cdktf/provider-aws/lib/secretsmanager-secret";
 import { SecretsmanagerSecretVersion } from "@cdktf/provider-aws/lib/secretsmanager-secret-version";
-import { Fn, IResolvable, TerraformIterator } from "cdktf";
+import { Fn, TerraformIterator } from "cdktf";
 import { Construct } from "constructs";
 
 export type SMSecret = {
@@ -22,7 +22,7 @@ export type SecretsManagerInput = {
     // Unmanaged: boolean,
 };
 
-export class GenericSecretsManager extends Construct {
+export class DepGenericSecretsManager extends Construct {
     constructor(scope: Construct, id: string, input: SecretsManagerInput | any) {
         super(scope, id);
 
@@ -69,7 +69,7 @@ export class OAuthTokenSecretsManager extends Construct {
 
         const OAuthInterator = TerraformIterator.fromMap(tokens);
 
-        new GenericSecretsManager(this, "gsm", {
+        new DepGenericSecretsManager(this, "gsm", {
             Secrets: OAuthInterator.dynamic({
                 secret_key_1: {
                     description: "This is a description"

@@ -1,29 +1,20 @@
 secrets = {
-  secret-1 = {
-    description             = "My secret 1"
-    recovery_window_in_days = 7
-    secret_string           = "This is an example"
-    policy                  = <<POLICY
-				{
-					"Version": "2012-10-17",
-					"Statement": [
-						{
-							"Sid": "EnableAllPermissions",
-							"Effect": "Allow",
-							"Principal": {
-								"AWS": "*"
-							},
-							"Action": "secretsmanager:GetSecretValue",
-							"Resource": "*"
-						}
-					]
-				}
-				POLICY
+  secret-1-2 = {
+    secret_string                  = "This is an example"
+    description                    = "The example description"
+    kms_key_id                     = null
+    policy                         = null
+    force_overwrite_replica_secret = null
+    recovery_window_in_days        = 7
+    replica_regions                = {}
   },
-  secret-2 = {
-    description             = "My secret 2"
-    recovery_window_in_days = 7
-    secret_string           = "This is another example"
-    policy                  = null
+  secret-2-2 = {
+    secret_string                  = "This is another example"
+    description                    = "The example description 2"
+    kms_key_id                     = null
+    policy                         = null
+    force_overwrite_replica_secret = null
+    recovery_window_in_days        = 7
+    replica_regions                = {}
   }
 }

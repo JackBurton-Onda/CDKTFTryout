@@ -1,7 +1,7 @@
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { App, CloudBackend, NamedCloudWorkspace, TerraformStack, TerraformVariable, VariableType } from "cdktf";
 import { Construct } from "constructs";
-import { GenericSecretsManager } from "./oAuthTokenManager";
+import { GeneralSecretsmanager } from "./secretsmanager/secretsmanager";
 import { Tfvars } from "./variables";
 
 class MyStack extends TerraformStack {
@@ -15,16 +15,11 @@ class MyStack extends TerraformStack {
     });
 
     const secretsMap = new TerraformVariable(this, "secrets", {
-      type: VariableType.map(VariableType.object({
-        description: VariableType.STRING,
-        recovery_window_in_days: VariableType.NUMBER,
-        secret_string: VariableType.STRING,
-        policy: VariableType.STRING
-      })),
+      type: VariableType.map(VariableType.ANY),
     });
 
-    new GenericSecretsManager(this, "gsm", {
-      Secrets: secretsMap.value,
+    new GeneralSecretsmanager(this, "gsm", {
+      secrets: secretsMap.value,
     });
   }
 }

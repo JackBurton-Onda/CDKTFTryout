@@ -1,14 +1,14 @@
 import { SecretsmanagerSecret } from "@cdktf/provider-aws/lib/secretsmanager-secret";
 import { SecretsmanagerSecretVersion } from "@cdktf/provider-aws/lib/secretsmanager-secret-version";
-import { Fn, Op, TerraformIterator, Token, conditional } from "cdktf";
+import { TerraformIterator, TerraformOutput } from "cdktf";
 import { Construct } from "constructs";
 
 type secret = {
     description: string,
     kms_key_id: string,
-    name_prefix: string,
     policy: string,
-    recover_window_id_days: number,
+    force_overwrite_replica_secret: boolean,
+    recovery_window_in_days: number,
     replica_regions: Map<string, string>,
     secret_string: string,
     secret_key_value: Map<string, string>,
@@ -16,6 +16,8 @@ type secret = {
 type GeneralSecretsmanagerConfig = {
     secrets: Map<string, secret>;
 };
+
+// const NULL_DEFAULT = "5737fe08-f93f-423a-a912-014377bb78c6";
 
 export class GeneralSecretsmanager extends Construct {
     constructor(
@@ -29,17 +31,34 @@ export class GeneralSecretsmanager extends Construct {
 
         const aws_secretsmanager_secret = new SecretsmanagerSecret(this, "sm", {
             forEach: secretsIterator,
-            name: `${conditional(Op.eq(Fn.lookup(secretsIterator.value, "name_prefix", Token.nullValue()), Token.nullValue()), secretsIterator.key, Token.nullValue())}`,
+            name: secretsIterator.key,
+            description: secretsIterator.getString("description"),
+            kmsKeyId: secretsIterator.getString("kms_key_id"),
+            policy: secretsIterator.getString("policy"),
+            forceOverwriteReplicaSecret: secretsIterator.getBoolean("force_overwrite_replica_secret"),
+            recoveryWindowInDays: secretsIterator.getNumber("recovery_window_in_days"),
         });
 
-        new SecretsmanagerSecretVersion(this, "sm-sv", {
+        aws_secretsmanager_secret.addOverride("dynamic.replica", {
+            for_each: secretsIterator.getStringMap("replica_regions"),
+            content: {
+                region: "${replica.key}",
+                kms_key_id: "${replica.value}",
+            },
+        });
+
+        const smsv = new SecretsmanagerSecretVersion(this, "sm-sv", {
             forEach: secretsIterator,
-            secretId: secretsIterator.key,
-            secretString: `${Fn.lookup(secretsIterator.value, "secret_string", null)}`,
+            secretId: aws_secretsmanager_secret.arn,
+            secretString: `${secretsIterator.getString("secret_string")}`,
             dependsOn: [aws_secretsmanager_secret],
             lifecycle: {
                 ignoreChanges: ["secret_id"]
             }
+        });
+
+        new TerraformOutput(this, "arn", {
+            value: smsv.arn,
         });
     }
 }
