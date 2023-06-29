@@ -1,8 +1,8 @@
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
 import { App, CloudBackend, NamedCloudWorkspace, TerraformStack, TerraformVariable, VariableType } from "cdktf";
 import { Construct } from "constructs";
-import { GeneralSecretsmanager } from "./secretsmanager/secretsmanager";
 import { Tfvars } from "./variables";
+import { OndaSecretsmanager } from "./secretsmanager/secretsmanager";
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
@@ -18,7 +18,7 @@ class MyStack extends TerraformStack {
       type: VariableType.map(VariableType.ANY),
     });
 
-    new GeneralSecretsmanager(this, "gsm", {
+    new OndaSecretsmanager(this, "gsm", {
       secrets: secretsMap.value,
     });
   }

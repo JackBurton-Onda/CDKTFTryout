@@ -1,9 +1,9 @@
 import { SecretsmanagerSecret } from "@cdktf/provider-aws/lib/secretsmanager-secret";
 import { SecretsmanagerSecretVersion } from "@cdktf/provider-aws/lib/secretsmanager-secret-version";
-import { TerraformIterator, TerraformOutput } from "cdktf";
+import { Fn, TerraformIterator, TerraformOutput } from "cdktf";
 import { Construct } from "constructs";
 
-type secret = {
+export type secret = {
     description: string,
     kms_key_id: string,
     policy: string,
@@ -16,6 +16,8 @@ type secret = {
 type GeneralSecretsmanagerConfig = {
     secrets: Map<string, secret>;
 };
+
+
 
 // const NULL_DEFAULT = "5737fe08-f93f-423a-a912-014377bb78c6";
 
@@ -40,16 +42,16 @@ export class GeneralSecretsmanager extends Construct {
         });
 
         aws_secretsmanager_secret.addOverride("dynamic.replica", {
-            for_each: secretsIterator.getStringMap("replica_regions"),
+            for_each: secretsIterator.getMap("replica_regions"),
             content: {
                 region: "${replica.key}",
                 kms_key_id: "${replica.value}",
             },
         });
 
-        const smsv = new SecretsmanagerSecretVersion(this, "sm-sv", {
+        new SecretsmanagerSecretVersion(this, "sm-sv", {
             forEach: secretsIterator,
-            secretId: aws_secretsmanager_secret.arn,
+            secretId: secretsIterator.key,
             secretString: `${secretsIterator.getString("secret_string")}`,
             dependsOn: [aws_secretsmanager_secret],
             lifecycle: {
@@ -58,7 +60,27 @@ export class GeneralSecretsmanager extends Construct {
         });
 
         new TerraformOutput(this, "arn", {
-            value: smsv.arn,
+            value: aws_secretsmanager_secret.getListAttribute("arn"),
         });
+    }
+}
+
+export class OndaSecretsmanager extends GeneralSecretsmanager {
+    constructor(
+        scope: Construct,
+        id: string,
+        config: GeneralSecretsmanagerConfig
+    ) {
+        super(scope, id, config);
+
+        var secretsMap = new Map<string, secret>();
+        config.secrets.forEach((v, k) => {
+            secretsMap.set(k, {
+                ...v,
+            });
+
+        });
+
+        config.secrets = secretsMap;
     }
 }
