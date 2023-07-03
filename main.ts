@@ -1,8 +1,8 @@
 import { AwsProvider } from "@cdktf/provider-aws/lib/provider";
-import { App, CloudBackend, NamedCloudWorkspace, TerraformStack, TerraformVariable, VariableType } from "cdktf";
+import { App, CloudBackend, NamedCloudWorkspace, TerraformOutput, TerraformStack } from "cdktf";
 import { Construct } from "constructs";
+import { GoogleProjectOAuth2Secret } from "./secretsmanager/secretsmanager";
 import { Tfvars } from "./variables";
-import { OndaSecretsmanager } from "./secretsmanager/secretsmanager";
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, id: string) {
@@ -14,12 +14,15 @@ class MyStack extends TerraformStack {
       region: vars.defaultRegion,
     });
 
-    const secretsMap = new TerraformVariable(this, "secrets", {
-      type: VariableType.map(VariableType.ANY),
+    const experimental = GoogleProjectOAuth2Secret.getInstance(this, "GoogleCloudOAuth2Token", vars.googleCloudOAuth2CredentialSecretString);
+    const otherOutput = GoogleProjectOAuth2Secret.getInstance(this, "otherthing", "Wow a string");
+
+    new TerraformOutput(this, "OtherIDOut", {
+      value: experimental.id,
     });
 
-    new OndaSecretsmanager(this, "gsm", {
-      secrets: secretsMap.value,
+    new TerraformOutput(this, "WORK", {
+      value: otherOutput.id
     });
   }
 }

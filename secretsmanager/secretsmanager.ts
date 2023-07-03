@@ -1,86 +1,51 @@
 import { SecretsmanagerSecret } from "@cdktf/provider-aws/lib/secretsmanager-secret";
 import { SecretsmanagerSecretVersion } from "@cdktf/provider-aws/lib/secretsmanager-secret-version";
-import { Fn, TerraformIterator, TerraformOutput } from "cdktf";
 import { Construct } from "constructs";
 
-export type secret = {
-    description: string,
-    kms_key_id: string,
-    policy: string,
-    force_overwrite_replica_secret: boolean,
-    recovery_window_in_days: number,
-    replica_regions: Map<string, string>,
-    secret_string: string,
-    secret_key_value: Map<string, string>,
-};
-type GeneralSecretsmanagerConfig = {
-    secrets: Map<string, secret>;
+export type GenericSecretConfig = {
+    name?: string,
+    description?: string,
+    kmsKeyId?: string,
+    policy?: string,
+    forceOverwriteReplicaSecret?: boolean,
+    recoveryWindowInDays?: number,
+    tags?: { [key: string]: string; },
 };
 
-
-
-// const NULL_DEFAULT = "5737fe08-f93f-423a-a912-014377bb78c6";
-
-export class GeneralSecretsmanager extends Construct {
+export class GenericSecret extends SecretsmanagerSecret {
     constructor(
         scope: Construct,
         id: string,
-        config: GeneralSecretsmanagerConfig,
+        config: GenericSecretConfig,
+        secretString: string,
     ) {
-        super(scope, id);
-
-        const secretsIterator = TerraformIterator.fromMap(config.secrets);
-
-        const aws_secretsmanager_secret = new SecretsmanagerSecret(this, "sm", {
-            forEach: secretsIterator,
-            name: secretsIterator.key,
-            description: secretsIterator.getString("description"),
-            kmsKeyId: secretsIterator.getString("kms_key_id"),
-            policy: secretsIterator.getString("policy"),
-            forceOverwriteReplicaSecret: secretsIterator.getBoolean("force_overwrite_replica_secret"),
-            recoveryWindowInDays: secretsIterator.getNumber("recovery_window_in_days"),
-        });
-
-        aws_secretsmanager_secret.addOverride("dynamic.replica", {
-            for_each: secretsIterator.getMap("replica_regions"),
-            content: {
-                region: "${replica.key}",
-                kms_key_id: "${replica.value}",
-            },
-        });
+        super(scope, id, config);
 
         new SecretsmanagerSecretVersion(this, "sm-sv", {
-            forEach: secretsIterator,
-            secretId: secretsIterator.key,
-            secretString: `${secretsIterator.getString("secret_string")}`,
-            dependsOn: [aws_secretsmanager_secret],
-            lifecycle: {
-                ignoreChanges: ["secret_id"]
-            }
-        });
-
-        new TerraformOutput(this, "arn", {
-            value: aws_secretsmanager_secret.getListAttribute("arn"),
+            secretId: this.arn,
+            secretString: secretString
         });
     }
 }
 
-export class OndaSecretsmanager extends GeneralSecretsmanager {
-    constructor(
+export class GoogleProjectOAuth2Secret extends GenericSecret {
+    private static instance: GoogleProjectOAuth2Secret;
+    private constructor(
         scope: Construct,
         id: string,
-        config: GeneralSecretsmanagerConfig
+        secretString: string,
     ) {
-        super(scope, id, config);
+        super(scope, id, {
+            name: "GoogleProjectOAuth2Secret",
+            description: "OAuth2 Token for Google Cloud Project integration."
+        }, secretString);
+    }
 
-        var secretsMap = new Map<string, secret>();
-        config.secrets.forEach((v, k) => {
-            secretsMap.set(k, {
-                ...v,
-            });
+    public static getInstance(scope: Construct, id: string, secretString: string): GoogleProjectOAuth2Secret {
+        if (!this.instance) {
+            this.instance = new GoogleProjectOAuth2Secret(scope, id, secretString);
+        }
 
-        });
-
-        config.secrets = secretsMap;
+        return this.instance;
     }
 }
